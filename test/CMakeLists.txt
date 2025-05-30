@@ -27,3 +27,9 @@ add_executable(TestAsyncGenerator
 
 target_link_libraries(TestAsyncGenerator
     tev-cpp)
+
+add_executable(TestEncapsulatedPromise
+    TestEncapsulatedPromise.cpp)
+
+target_link_libraries(TestEncapsulatedPromise
+    tev-cpp)
