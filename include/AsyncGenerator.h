@@ -20,9 +20,9 @@ namespace JS
                 Promise<std::optional<T>> promise{};
                 if (!values.empty())
                 {
-                    T v = values.front();
+                    auto v = std::move(values.front());
                     values.pop();
-                    promise.Resolve(std::make_optional<T>(v));
+                    promise.Resolve(std::make_optional<T>(std::move(v)));
                 }
                 else if (exception)
                 {
@@ -42,6 +42,20 @@ namespace JS
                     nextPromise = promise;
                 }
                 return promise;
+            }
+
+            void Feed(T&& v)
+            {
+                if (nextPromise.has_value())
+                {
+                    auto promise = nextPromise.value();
+                    nextPromise.reset();
+                    promise.Resolve(std::make_optional<T>(std::move(v)));
+                }
+                else
+                {
+                    values.push(std::move(v));
+                }
             }
 
             void Feed(const T &v)
@@ -98,6 +112,11 @@ namespace JS
                 return AsyncGenerator{state};
             }
             std::suspend_never initial_suspend() { return {}; }
+            std::suspend_never yield_value(T &&v)
+            {
+                state->Feed(std::move(v));
+                return {};
+            }
             std::suspend_never yield_value(const T &v)
             {
                 state->Feed(v);
@@ -128,6 +147,11 @@ namespace JS
         Promise<std::optional<T>> Next() const
         {
             return _state->Next();
+        }
+
+        void Feed(T &&value) const
+        {
+            _state->Feed(std::move(value));
         }
 
         void Feed(const T &value) const

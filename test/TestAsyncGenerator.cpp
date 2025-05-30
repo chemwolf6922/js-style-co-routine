@@ -1,4 +1,5 @@
 #include <vector>
+#include <memory>
 #include <iostream>
 #include <tev-cpp/Tev.h>
 #include "../include/AsyncGenerator.h"
@@ -20,6 +21,15 @@ JS::AsyncGenerator<int> GenNumbersAsync(int start, int end)
     for (int i = start; i <= end; i++)
     {
         co_yield i;
+        co_await DelayAsync(100);
+    }
+}
+
+JS::AsyncGenerator<std::unique_ptr<int>> GenNumbersNonCopyableAsync(int start, int end)
+{
+    for (int i = start; i <= end; i++)
+    {
+        co_yield std::make_unique<int>(i);
         co_await DelayAsync(100);
     }
 }
@@ -54,6 +64,30 @@ JS::Promise<void> TestGenNumbersAsync()
     }
 }
 
+JS::Promise<void> TestGenNumbersNonCopyableAsync()
+{
+    size_t start = 1;
+    size_t end = 5;
+    std::vector<int> result{};
+    auto gen = GenNumbersNonCopyableAsync(static_cast<int>(start), static_cast<int>(end));
+    while (true)
+    {
+        auto next = co_await gen.Next();
+        if (!next.has_value())
+        {
+            break;
+        }
+        result.push_back(*next.value());
+    }
+    assert(result.size() == (end - start + 1), "Generator did not yield the expected number of values");
+    int expectedValue = start;
+    for (const auto &value : result)
+    {
+        assert(value == expectedValue, "Generator yielded unexpected value");
+        expectedValue++;
+    }
+}
+
 JS::Promise<void> TestGenExceptionAsync()
 {
     auto gen = GenExceptionAsync("Test exception");
@@ -71,6 +105,7 @@ JS::Promise<void> TestGenExceptionAsync()
 JS::Promise<void> TestAsync()
 {
     RunAsyncTest(TestGenNumbersAsync);
+    RunAsyncTest(TestGenNumbersNonCopyableAsync);
     RunAsyncTest(TestGenExceptionAsync);
 }
 
