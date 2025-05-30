@@ -48,7 +48,7 @@ JS::Promise<void> TestGenNumbersAsync()
     auto gen = GenNumbersAsync(static_cast<int>(start), static_cast<int>(end));
     while (true)
     {
-        auto next = co_await gen.Next();
+        auto next = co_await gen.NextAsync();
         if (!next.has_value())
         {
             break;
@@ -72,7 +72,7 @@ JS::Promise<void> TestGenNumbersNonCopyableAsync()
     auto gen = GenNumbersNonCopyableAsync(static_cast<int>(start), static_cast<int>(end));
     while (true)
     {
-        auto next = co_await gen.Next();
+        auto next = co_await gen.NextAsync();
         if (!next.has_value())
         {
             break;
@@ -93,7 +93,7 @@ JS::Promise<void> TestGenExceptionAsync()
     auto gen = GenExceptionAsync("Test exception");
     try
     {
-        co_await gen.Next();
+        co_await gen.NextAsync();
         assert(false, "Should have thrown an exception");
     }
     catch(const std::exception& e)

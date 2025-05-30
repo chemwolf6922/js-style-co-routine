@@ -15,7 +15,7 @@ namespace JS
             std::optional<Promise<std::optional<T>>> nextPromise{};
             bool finished{false};
 
-            Promise<std::optional<T>> Next()
+            Promise<std::optional<T>> NextAsync()
             {
                 Promise<std::optional<T>> promise{};
                 if (!values.empty())
@@ -144,9 +144,9 @@ namespace JS
         {
         }
 
-        Promise<std::optional<T>> Next() const
+        Promise<std::optional<T>> NextAsync() const
         {
-            return _state->Next();
+            return _state->NextAsync();
         }
 
         void Feed(T &&value) const

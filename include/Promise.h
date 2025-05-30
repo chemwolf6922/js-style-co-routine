@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <stdexcept>
+#include <utility>
 
 /**
  * Drawbacks compare to a real JavaScript Promise:
