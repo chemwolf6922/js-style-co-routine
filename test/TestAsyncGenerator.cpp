@@ -1,0 +1,87 @@
+#include <vector>
+#include <iostream>
+#include <tev-cpp/Tev.h>
+#include "../include/AsyncGenerator.h"
+#include "TestUtility.h"
+
+static Tev tev{};
+
+JS::Promise<void> DelayAsync(int ms)
+{
+    JS::Promise<void> promise{};
+    tev.SetTimeout([=]() {
+        promise.Resolve();
+    }, ms);
+    return promise;
+}
+
+JS::AsyncGenerator<int> GenNumbersAsync(int start, int end)
+{
+    for (int i = start; i <= end; i++)
+    {
+        co_yield i;
+        co_await DelayAsync(100);
+    }
+}
+
+JS::AsyncGenerator<int> GenExceptionAsync(const std::string reason)
+{
+    co_await DelayAsync(100);
+    throw std::runtime_error(reason);
+}
+
+JS::Promise<void> TestGenNumbersAsync()
+{
+    size_t start = 1;
+    size_t end = 5;
+    std::vector<int> result{};
+    auto gen = GenNumbersAsync(static_cast<int>(start), static_cast<int>(end));
+    while (true)
+    {
+        auto next = co_await gen.Next();
+        if (!next.has_value())
+        {
+            break;
+        }
+        result.push_back(next.value());
+    }
+    assert(result.size() == (end - start + 1), "Generator did not yield the expected number of values");
+    int expectedValue = start;
+    for (const auto &value : result)
+    {
+        assert(value == expectedValue, "Generator yielded unexpected value");
+        expectedValue++;
+    }
+}
+
+JS::Promise<void> TestGenExceptionAsync()
+{
+    auto gen = GenExceptionAsync("Test exception");
+    try
+    {
+        co_await gen.Next();
+        assert(false, "Should have thrown an exception");
+    }
+    catch(const std::exception& e)
+    {
+        assert(std::string(e.what()) == "Test exception", "Generator did not throw the expected exception");
+    }
+}
+
+JS::Promise<void> TestAsync()
+{
+    RunAsyncTest(TestGenNumbersAsync);
+    RunAsyncTest(TestGenExceptionAsync);
+}
+
+int main(int argc, char const *argv[])
+{
+    (void)argc;
+    (void)argv;
+
+    TestAsync();
+
+    tev.MainLoop();
+
+    return 0;
+}
