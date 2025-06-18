@@ -25,6 +25,16 @@ JS::AsyncGenerator<int> GenNumbersAsync(int start, int end)
     }
 }
 
+JS::AsyncGenerator<int, bool> GenNumberWithReturnAsync(int start, int end, bool returnValue)
+{
+    for (int i = start; i <= end; i++)
+    {
+        co_yield i;
+        co_await DelayAsync(100);
+    }
+    co_return returnValue;
+}
+
 JS::AsyncGenerator<std::unique_ptr<int>> GenNumbersNonCopyableAsync(int start, int end)
 {
     for (int i = start; i <= end; i++)
@@ -32,6 +42,16 @@ JS::AsyncGenerator<std::unique_ptr<int>> GenNumbersNonCopyableAsync(int start, i
         co_yield std::make_unique<int>(i);
         co_await DelayAsync(100);
     }
+}
+
+JS::AsyncGenerator<std::unique_ptr<int>, std::unique_ptr<bool>> GenNumbersNonCopyableWithReturnAsync(int start, int end, bool returnValue)
+{
+    for (int i = start; i <= end; i++)
+    {
+        co_yield std::make_unique<int>(i);
+        co_await DelayAsync(100);
+    }
+    co_return std::make_unique<bool>(returnValue);
 }
 
 JS::AsyncGenerator<int> GenExceptionAsync(const std::string reason)
@@ -55,6 +75,32 @@ JS::Promise<void> TestGenNumbersAsync()
         }
         result.push_back(next.value());
     }
+    assert(result.size() == (end - start + 1), "Generator did not yield the expected number of values");
+    int expectedValue = start;
+    for (const auto &value : result)
+    {
+        assert(value == expectedValue, "Generator yielded unexpected value");
+        expectedValue++;
+    }
+}
+
+JS::Promise<void> TestReturnValueAsync()
+{
+    size_t start = 1;
+    size_t end = 5;
+    std::vector<int> result{};
+    auto gen = GenNumberWithReturnAsync(static_cast<int>(start), static_cast<int>(end), true);
+    while (true)
+    {
+        auto next = co_await gen.NextAsync();
+        if (!next.has_value())
+        {
+            break;
+        }
+        result.push_back(next.value());
+    }
+    auto returnValue = gen.GetReturnValue();
+    assert(returnValue == true, "Generator did not return the expected value");
     assert(result.size() == (end - start + 1), "Generator did not yield the expected number of values");
     int expectedValue = start;
     for (const auto &value : result)
@@ -88,6 +134,32 @@ JS::Promise<void> TestGenNumbersNonCopyableAsync()
     }
 }
 
+JS::Promise<void> TestGenNumbersNonCopyableWithReturnAsync()
+{
+    size_t start = 1;
+    size_t end = 5;
+    std::vector<int> result{};
+    auto gen = GenNumbersNonCopyableWithReturnAsync(static_cast<int>(start), static_cast<int>(end), true);
+    while (true)
+    {
+        auto next = co_await gen.NextAsync();
+        if (!next.has_value())
+        {
+            break;
+        }
+        result.push_back(*next.value());
+    }
+    auto returnValue = gen.GetReturnValue();
+    assert(*returnValue == true, "Generator did not return the expected value");
+    assert(result.size() == (end - start + 1), "Generator did not yield the expected number of values");
+    int expectedValue = start;
+    for (const auto &value : result)
+    {
+        assert(value == expectedValue, "Generator yielded unexpected value");
+        expectedValue++;
+    }
+}
+
 JS::Promise<void> TestGenExceptionAsync()
 {
     auto gen = GenExceptionAsync("Test exception");
@@ -105,7 +177,9 @@ JS::Promise<void> TestGenExceptionAsync()
 JS::Promise<void> TestAsync()
 {
     RunAsyncTest(TestGenNumbersAsync);
+    RunAsyncTest(TestReturnValueAsync);
     RunAsyncTest(TestGenNumbersNonCopyableAsync);
+    RunAsyncTest(TestGenNumbersNonCopyableWithReturnAsync);
     RunAsyncTest(TestGenExceptionAsync);
 }
 
