@@ -34,8 +34,9 @@ namespace JS
                 }
                 else if (thenCallback)
                 {
-                    thenCallback(std::move(value.value()));
+                    auto temp = std::move(value.value());
                     value.reset();
+                    thenCallback(std::move(temp));
                 }
             }
             void Resolve(const T &v)
@@ -47,8 +48,9 @@ namespace JS
                 }
                 else if (thenCallback)
                 {
-                    thenCallback(value.value());
+                    auto temp = std::move(value.value());
                     value.reset();
+                    thenCallback(std::move(temp));
                 }
             }
             void Reject(const std::exception_ptr &e)
@@ -196,8 +198,9 @@ namespace JS
             _state->thenCallback = callback;
             if (_state->value.has_value())
             {
-                _state->thenCallback(std::move(_state->value.value()));
+                auto temp = std::move(_state->value.value());
                 _state->value.reset();
+                _state->thenCallback(std::move(temp));
             }
         }
 
